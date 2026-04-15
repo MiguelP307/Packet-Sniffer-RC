@@ -1,22 +1,16 @@
 package main
 
 import (
-    "fmt"
-    "log"
-
-    "github.com/google/gopacket"
-    "github.com/google/gopacket/pcap"
+	"sniffer/internal/parser"
+	"sniffer/internal/capture"
 )
 
 func main() {
-    handle, err := pcap.OpenLive("enp0s3", 1600, true, pcap.BlockForever)
-    if err != nil {
-        log.Fatal(err)
+    
+    packets, _ := capture.Start_Capture("enp0s3")
+
+    for packet := range packets{
+        parser.Parse(packet)
     }
 
-    packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
-
-    for packet := range packetSource.Packets() {
-        fmt.Println(packet)
-    }
 }

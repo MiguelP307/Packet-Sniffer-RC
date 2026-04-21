@@ -7,10 +7,12 @@ import (
 
 func main() {
     
-    packets, _ := capture.Start_Capture("enp0s3")
+    Interface := "enp0s3"
+
+    packets, _ := capture.Start_Capture(Interface)
 
     for packet := range packets{
-        parser.Parse(packet)
+        parser.Parse(packet, Interface)
     }
 
 }

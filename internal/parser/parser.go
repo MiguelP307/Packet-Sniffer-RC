@@ -51,9 +51,11 @@ func parseL4(protocol uint8, data []byte, newParsedPacket *model.ParsedPacket) {
 	if handler, ok := layer4.Handlers[protocol]; ok {
 		srcPort, dstPort, payload := handler(data, newParsedPacket)
 		
-		//fmt.Println(newParsedPacket)
+		if payload != nil {
+			parseL7(srcPort, dstPort, payload, newParsedPacket)
+		}
 
-		parseL7(srcPort, dstPort, payload, newParsedPacket)
+		fmt.Println(newParsedPacket)
 
 	}
 

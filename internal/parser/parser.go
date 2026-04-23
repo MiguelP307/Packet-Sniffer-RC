@@ -38,8 +38,6 @@ func parseL3(ethType uint16, data []byte, newParsedPacket *model.ParsedPacket) {
 	if handler, ok := layer3.Handlers[ethType]; ok {
 		protL4, payload := handler(data, newParsedPacket)
 
-		//fmt.Println(newParsedPacket)
-
 		parseL4(protL4, payload, newParsedPacket)
 	}
 
@@ -50,15 +48,17 @@ func parseL4(protocol uint8, data []byte, newParsedPacket *model.ParsedPacket) {
 
 	if handler, ok := layer4.Handlers[protocol]; ok {
 		srcPort, dstPort, payload := handler(data, newParsedPacket)
-		
+
 		if payload != nil {
 			parseL7(srcPort, dstPort, payload, newParsedPacket)
+			return
 		}
 
 		fmt.Println(newParsedPacket)
 
+		return
 	}
-
+ 
 	newParsedPacket.Infos = "Unknown L4"
 }
 
@@ -78,5 +78,4 @@ func parseL7(srcPort uint16, dstPort uint16, data []byte, newParsedPacket *model
 
 	newParsedPacket.Infos = "Unknown L7"
 
-	fmt.Print()
 }

@@ -16,6 +16,8 @@ func HandleIPv4(data []byte, parsedPacket *model.ParsedPacket) (uint8, []byte){
 	parsedPacket.SrcIP = getIP(data[12:16])
 	parsedPacket.DstIP = getIP(data[16:20])
 
+	parsedPacket.Protocol = "IPv4"
+
 	return protocol, data[headerLen:]
 }
 

@@ -14,6 +14,9 @@ type ParsedPacket struct {
 	
 	SrcIP string
 	DstIP string
+
+	SrcPort string
+	DstPort string
 	
 	Length int
 	
@@ -37,6 +40,9 @@ Dst MAC:   %s
 Src IP:    %s
 Dst IP:    %s
 
+Src Port:    %s
+Dst Port:    %s
+
 Info:      %s
 --------------`,
 		p.Timestamp,
@@ -47,6 +53,8 @@ Info:      %s
 		p.DstMAC,
 		p.SrcIP,
 		p.DstIP,
+		p.SrcPort,
+		p.DstPort,
 		p.Infos,
 	)
 }

@@ -7,7 +7,7 @@ import (
 	"sniffer/internal/model"
 )
 
-func HandleARP(data []byte, parsedPacket *model.ParsedPacket) {
+func HandleARP(data []byte, parsedPacket *model.ParsedPacket) (uint8, []byte) {
 
 	hardwareType := binary.BigEndian.Uint16(data[0:2])
 	protocolType := binary.BigEndian.Uint16(data[2:4])
@@ -40,6 +40,9 @@ func HandleARP(data []byte, parsedPacket *model.ParsedPacket) {
 		hardwareType,
 		protocolType,
 	)
+	fmt.Println("HEEEEERE")
+
+	return 0, nil
 
 }
 

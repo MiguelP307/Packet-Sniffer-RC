@@ -8,5 +8,5 @@ var Handlers = map[uint8]L4Handler{
 	1: HandleICMP,
 	6: HandleTCP,
 	17: HandleUDP,
-	//58: HandleICMPv6,
+	58: HandleICMPv6,
 }

@@ -13,8 +13,8 @@ func HandleIPv4(data []byte, parsedPacket *model.ParsedPacket) (uint8, []byte){
 
 	protocol := data[9]
 
-	parsedPacket.SrcIP = getIP(data[12:16])
-	parsedPacket.DstIP = getIP(data[16:20])
+	parsedPacket.SrcIP = getIPv4(data[12:16])
+	parsedPacket.DstIP = getIPv4(data[16:20])
 
 	parsedPacket.Protocol = "IPv4"
 
@@ -22,7 +22,7 @@ func HandleIPv4(data []byte, parsedPacket *model.ParsedPacket) (uint8, []byte){
 }
 
 
-func getIP(data []byte) (string) {
+func getIPv4(data []byte) (string) {
 	// Data will always be 4 bytes long, Uint32
 	return net.IP(data).String()
 }

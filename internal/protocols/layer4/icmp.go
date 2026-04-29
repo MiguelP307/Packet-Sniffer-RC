@@ -4,7 +4,7 @@ import (
 	"sniffer/internal/model"
 )
 
-var icmpTypes = map[uint8]string {
+var icmpv4Types = map[uint8]string {
 	0: "Echo Reply",
 	3: "Destination Unreachable",
 	5: "Redirect Message",
@@ -21,9 +21,12 @@ func HandleICMP(data []byte, parsedPacket *model.ParsedPacket) (uint16, uint16, 
 	
 	typeICMP := data[0]
 
-	if typeString, ok := icmpTypes[typeICMP]; ok {
+	if typeString, ok := icmpv4Types[typeICMP]; ok {
 
 		parsedPacket.Infos = typeString		
+		
+	} else {
+		parsedPacket.Infos = "Unknown Type"
 	}
 
 	parsedPacket.Protocol = "ICMP"

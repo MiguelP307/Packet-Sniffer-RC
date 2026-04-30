@@ -2,9 +2,9 @@ package layer7
 
 import "sniffer/internal/model"
 
-
-func HandleHTTPS(data []byte, parsedPacket *model.ParsedPacket){
+func HandleHTTPS(data []byte, parsedPacket *model.ParsedPacket) {
 
 	parsedPacket.Protocol = "HTTPS"
+	parsedPacket.Infos = "HTTPS packet"
 
 }

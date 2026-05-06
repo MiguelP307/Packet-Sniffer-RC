@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"sniffer/internal/capture"
+	"sniffer/internal/flow"
 	"sniffer/internal/model"
 	"sniffer/internal/parser"
 	"sniffer/internal/view"
@@ -52,7 +53,7 @@ const (
 	colLength   = 8
 )
 
-/* -------------------- STATE -------------------- */
+/* -------------------- STATES-------------------- */
 
 type state int
 
@@ -64,6 +65,7 @@ const (
 	selectFilter
 	packetViewer
 	packetDetail
+	flowViewer
 )
 
 type menuItem struct {
@@ -109,6 +111,7 @@ type modelCLI struct {
 	paused bool
 
 	captureChan <-chan gopacket.Packet
+	flowManager *flow.Manager
 
 	layerIndex int
 }
@@ -131,6 +134,7 @@ func InitialModel() modelCLI {
 		state:     mainMenu,
 		mainList:  l,
 		packets:   []model.ParsedPacket{},
+		flowManager: flow.NewManager(),
 	}
 }
 
@@ -151,6 +155,7 @@ func (m modelCLI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		if !m.paused {
 			m.packets = append(m.packets, model.ParsedPacket(msg))
+			m.flowManager.Process(model.ParsedPacket(msg))
 		}
 
 		if m.autoScroll {
@@ -259,6 +264,9 @@ func (m modelCLI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "p":
 				m.paused = !m.paused
 
+			case "c":
+				m.state = flowViewer
+
 			case "esc":
 				m.captureChan = nil
 				m.packets = []model.ParsedPacket{}
@@ -287,6 +295,21 @@ func (m modelCLI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if m.layerIndex < len(m.selectedPacket.Layers)-1 {
 					m.layerIndex++
 				}
+			}
+		}
+		return m, nil
+
+
+	/* ---------------- FLOW VIEWER ---------------- */
+	case flowViewer:
+		switch msg := msg.(type) {
+
+		case tea.KeyMsg:
+
+			switch msg.String() {
+
+			case "esc":
+				m.state = packetViewer
 			}
 		}
 		return m, nil
@@ -451,6 +474,9 @@ func (m modelCLI) View() string {
 
 	case packetDetail:
 		return renderPacketDetail(m.selectedPacket, m.layerIndex)
+
+	case flowViewer:
+    	return renderFlowView(m)
 	}
 
 	return ""
@@ -643,7 +669,7 @@ func renderPacketList(m modelCLI) string {
 	}
 
 	// ---------- FOOTER ----------
-	out += "\nENTER = details | ESC = back | S = save | P = pause"
+	out += "\nENTER = details | ESC = back | S = save | P = pause | C = Connections"
 
 	return out
 }
@@ -678,6 +704,47 @@ func renderPacketDetail(p model.ParsedPacket, layerIndex int) string {
 	return style.Render(out)
 }
 
+func renderFlowView(m modelCLI) string {
+
+    out := "TCP FLOWS\n\n"
+
+    active := 0
+    closed := 0
+
+    for _, f := range m.flowManager.Flows {
+        if f.State == "CLOSED" {
+            closed++
+        } else {
+            active++
+        }
+    }
+
+    out += fmt.Sprintf("Active: %d | Closed: %d | Total: %d\n\n",
+        active, closed, len(m.flowManager.Flows),
+    )
+
+    out += "KEY | STATE | DURATION | PACKETS | BYTES\n"
+    out += strings.Repeat("-", 70) + "\n"
+
+    now := time.Now()
+
+    for _, f := range m.flowManager.Flows {
+
+        duration := now.Sub(f.StartTime).Seconds()
+
+        out += fmt.Sprintf("%s | %s | %.1fs | %d | %d\n",
+            f.Key,
+            f.State,
+            duration,
+            f.Packets,
+            f.Bytes,
+        )
+    }
+
+    out += "\nESC = back"
+
+    return out
+}
 
 func waitForPacket(ch <-chan gopacket.Packet, iface string) tea.Cmd {
 	return func() tea.Msg {

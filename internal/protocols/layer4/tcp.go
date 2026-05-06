@@ -41,7 +41,7 @@ func (t *TCP) View() []string {
 		fmt.Sprintf("Sequence Number (Raw): %d", t.SeqNumber),
 		fmt.Sprintf("Acknowledgment Number (Raw): %d", t.AckNumber),
 		fmt.Sprintf("Data Offset: %d", t.DataOffset),
-		fmt.Sprintf("Flags: SYN=%t, ACK=%t, FIN=%t", t.SynFlag, t.AckFlag, t.FinFlag),
+		fmt.Sprintf("Flags: SYN= %t, ACK= %t, FIN= %t", t.SynFlag, t.AckFlag, t.FinFlag),
 	}
 }
 

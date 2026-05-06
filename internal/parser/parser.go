@@ -11,39 +11,57 @@ import (
 	"sniffer/internal/view"
 
 	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
 )
 
 func Parse(packet gopacket.Packet, iface string) model.ParsedPacket {
 
 	data := packet.Data()
-
 	newParsedPacket := newParsedPacket(packet, iface)
 
-	ethType, payload := layer2.HandleEthernet(data, newParsedPacket)
+	linkLayer := packet.LinkLayer()
+	if linkLayer == nil {
+		return *newParsedPacket
+	}
 
-	parseL3(ethType, payload, newParsedPacket)
+	switch linkLayer.LayerType(){
+
+	case layers.LayerTypeEthernet:
+		protocolType, payload := layer2.HandleEthernet(data, newParsedPacket)
+		parseL3(protocolType, payload, newParsedPacket)
+
+	case layers.LayerTypeDot11:
+		protocolType, payload := layer2.HandleWiFi(data, newParsedPacket)
+		parseL3(protocolType, payload, newParsedPacket)
+
+	default:
+		// unknown / unsupported L2
+		return *newParsedPacket
+	}
 
 	newParsedPacket.Infos = BuildInfo(*newParsedPacket)
 
 	return *newParsedPacket
 }
 
-
-
-func newParsedPacket(packet gopacket.Packet, iface string) (*model.ParsedPacket){
+func newParsedPacket(packet gopacket.Packet, iface string) *model.ParsedPacket {
 
 	return &model.ParsedPacket{
 		Timestamp: packet.Metadata().Timestamp,
 		Interface: iface,
-		Length: int(len(packet.Data())),
-		Layers: []model.Layer{},
+		Length:    int(len(packet.Data())),
+		Layers:    []model.Layer{},
 	}
 }
 
-func parseL3(ethType uint16, data []byte, newParsedPacket *model.ParsedPacket){
+func parseL3(protocol uint16, data []byte, newParsedPacket *model.ParsedPacket) {
 
+	if protocol == 0 {
+		// Its WiFi
+		return
+	}
 
-	if handler, ok := layer3.Handlers[ethType]; ok {
+	if handler, ok := layer3.Handlers[protocol]; ok {
 		protL4, payload := handler(data, newParsedPacket)
 
 		if payload != nil {
@@ -68,7 +86,7 @@ func parseL4(protocol uint8, data []byte, newParsedPacket *model.ParsedPacket) {
 
 		return
 	}
- 
+
 }
 
 func parseL7(srcPort uint16, dstPort uint16, data []byte, newParsedPacket *model.ParsedPacket) {
@@ -78,15 +96,12 @@ func parseL7(srcPort uint16, dstPort uint16, data []byte, newParsedPacket *model
 		return
 	}
 
-
 	if handler, ok := layer7.Handlers[dstPort]; ok {
 		handler(data, newParsedPacket)
 		return
 	}
 
 }
-
-
 
 // -------------- Function that build little packet description --------------
 
@@ -141,7 +156,7 @@ func BuildInfo(p model.ParsedPacket) string {
 
 		/* ---------- ICMPv6 ---------- */
 		case *layer4.ICMPv6:
-			return view.FormatWithMap8	(v.Type, layer4.Icmpv6Types)
+			return view.FormatWithMap8(v.Type, layer4.Icmpv6Types)
 
 		/* ---------- ARP ---------- */
 		case *layer3.ARP:
@@ -163,4 +178,3 @@ func BuildInfo(p model.ParsedPacket) string {
 
 	return "Unknown"
 }
-

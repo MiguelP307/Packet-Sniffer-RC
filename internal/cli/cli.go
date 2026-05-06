@@ -1,13 +1,14 @@
-package main
+package cli
 
 import (
 	"fmt"
-	"os"
+	"strings"
 	"time"
 
 	"sniffer/internal/capture"
 	"sniffer/internal/model"
 	"sniffer/internal/parser"
+	"sniffer/internal/view"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
@@ -15,14 +16,40 @@ import (
 	"github.com/google/gopacket"
 )
 
+// --------------- FAKE DATA -------------
+
+func getFakeFilters() []string {
+	return []string{
+		"",
+		"tcp port 80",
+		"udp",
+		"icmp",
+		"host 8.8.8.8",
+		"port 443",
+	}
+}
+
+
+// --------------- STYLE ------------------
+
 var (
 	liveStyle = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("46")). // green
+		Foreground(lipgloss.Color("46")).
 		Bold(true)
 
 	pausedStyle = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("196")). // red
+		Foreground(lipgloss.Color("196")).
 		Bold(true)
+)
+
+/* ---------- RenderPacketView Table ------------ */
+
+const (
+	colID       = 4
+	colTime     = 10
+	colProto    = 10
+	colInfo     = 40
+	colLength   = 8
 )
 
 /* -------------------- STATE -------------------- */
@@ -39,6 +66,11 @@ const (
 	packetDetail
 )
 
+type menuItem struct {
+	label string
+	value string
+}
+
 /* -------------------- LIST ITEM -------------------- */
 
 type item string
@@ -46,6 +78,7 @@ type item string
 func (i item) Title() string       { return string(i) }
 func (i item) Description() string { return "" }
 func (i item) FilterValue() string { return string(i) }
+
 
 /* -------------------- MODEL -------------------- */
 
@@ -55,6 +88,8 @@ type modelCLI struct {
 	mainList list.Model
 	loadList list.Model
 	startList list.Model
+	ifaceList list.Model
+	filterList list.Model
 
 	interfaces []string
 	filters    []string
@@ -65,7 +100,11 @@ type modelCLI struct {
 	packets        []model.ParsedPacket
 	selectedPacket model.ParsedPacket
 
-	cursor         int
+	cursor int
+
+	offset int
+	height int
+
 	autoScroll bool
 	paused bool
 
@@ -78,7 +117,7 @@ type packetMsg model.ParsedPacket
 
 /* -------------------- INIT -------------------- */
 
-func initialModel() modelCLI {
+func InitialModel() modelCLI {
 	items := []list.Item{
 		item("Start Capture"),
 		item("Load Capture"),
@@ -116,9 +155,20 @@ func (m modelCLI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		if m.autoScroll {
 			m.cursor = len(m.packets) - 1
+
+			if m.height > 0 {
+				m.offset = len(m.packets) - m.height
+				if m.offset < 0 {
+					m.offset = 0
+				}
+			}
 		}
 
-		return m, waitForPacket(m.captureChan, "enp0s3")
+		return m, waitForPacket(m.captureChan, m.selectedInterface)
+
+	case tea.WindowSizeMsg:
+		m.height = msg.Height - 6
+		return m, nil
 
 	}
 	// ------------ State Machine -----------------
@@ -183,11 +233,20 @@ func (m modelCLI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if m.cursor > 0 {
 					m.cursor--
 					m.autoScroll = false
+
+					if m.cursor < m.offset {
+						m.offset--
+					}
 				}
 
 			case "down":
 				if m.cursor < len(m.packets)-1 {
 					m.cursor++
+
+					if m.cursor >= m.offset+m.height {
+						m.offset++
+					}
+
 					if m.cursor == len(m.packets)-1 {
 						m.autoScroll = true
 					}
@@ -202,6 +261,9 @@ func (m modelCLI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 			case "esc":
 				m.captureChan = nil
+				m.packets = []model.ParsedPacket{}
+				m.selectedInterface = ""
+				m.selectedFilter = ""
 				m.state = mainMenu
 			}
 		}
@@ -238,24 +300,33 @@ func (m modelCLI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "enter":
 				switch m.startList.SelectedItem().(item) {
 
-				case "Interface":
+				case "Interface:":
+					ifaces, err := capture.ListInterfaces()
+					if err != nil {
+						return m, nil
+					}
+
+					m.interfaces = ifaces
+					m.ifaceList = buildInterfaceList(ifaces)
 					m.state = selectInterface
 
-				case "Filter":
+				case "Filter:":
+					filters := getFakeFilters()
+
+					m.filters = filters
+					m.filterList = buildFilterList(filters)
 					m.state = selectFilter
 				
 				case "Capture":
-					// Start Capture Here
-					m.state = packetViewer
 
-					ch, _ := capture.Start_Capture("enp0s3")
+					ch, _ := capture.Start_Capture(m.selectedInterface, m.selectedFilter)
 
 					m.paused = false
 
 					m.captureChan = ch
 					m.state = packetViewer
 
-					return m, waitForPacket(m.captureChan, "enp0s3")
+					return m, waitForPacket(m.captureChan, m.selectedInterface)
 				}
 
 			case "esc", "b":
@@ -268,10 +339,59 @@ func (m modelCLI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 	
 	case selectInterface:
-		// Selecionar interface e adicionar a frente do menu anterior
+		var cmd tea.Cmd
+
+		m.ifaceList, cmd = m.ifaceList.Update(msg)
+
+		switch msg := msg.(type) {
+
+		case tea.KeyMsg:
+			switch msg.String() {
+
+			case "enter":
+				selected := m.ifaceList.SelectedItem().(item)
+
+				m.selectedInterface = string(selected)
+				m.state = startMenu
+
+				return m, tea.Batch(
+					tea.ClearScreen,
+				)
+
+			case "esc":
+				m.state = startMenu
+			}
+		}
+
+		return m, cmd
 
 	case selectFilter:	
-		// Selecionar filtro e mostrar no menu anterior
+		var cmd tea.Cmd
+
+		m.filterList, cmd = m.filterList.Update(msg)
+
+		switch msg := msg.(type) {
+
+		case tea.KeyMsg:
+			switch msg.String() {
+
+			case "enter":
+				selected := m.filterList.SelectedItem().(item)
+
+				m.selectedFilter = string(selected)
+				m.state = startMenu
+
+				return m, tea.Batch(
+					tea.ClearScreen,
+				)
+
+
+			case "esc":
+				m.state = startMenu
+			}
+		}
+
+		return m, cmd
 	
 	}
 
@@ -288,7 +408,40 @@ func (m modelCLI) View() string {
 		return m.mainList.View()
 
 	case startMenu:
-		return m.startList.View()
+		items := m.startList.Items()
+
+		for i := range items {
+			it := items[i].(item)
+
+			switch string(it) {
+			case "Interface:":
+				if m.selectedInterface != "" {
+					items[i] = item(fmt.Sprintf("Interface: %s", m.selectedInterface))
+				}
+
+			case "Filter:":
+				if m.selectedFilter != "" {
+					items[i] = item(fmt.Sprintf("Filter: %s", m.selectedFilter))
+				}
+			}
+		}
+
+		temp := m.startList
+		temp.SetItems(items)
+
+		return temp.View()
+
+	case selectInterface:
+		if len(m.ifaceList.Items()) == 0 {
+			return "Loading interfaces..."
+		}
+		return m.ifaceList.View()
+
+	case selectFilter:
+		if len(m.filterList.Items()) == 0 {
+			return "Loading filters..."
+		}
+		return m.filterList.View()
 
 	case loadMenu:
 		return m.loadList.View()
@@ -301,6 +454,13 @@ func (m modelCLI) View() string {
 	}
 
 	return ""
+}
+
+func (m modelCLI) startMenuLabels() map[string]string {
+	return map[string]string{
+		"Interface:": m.selectedInterface,
+		"Filter:":    m.selectedFilter,
+	}
 }
 
 /* -------------------- HELPERS -------------------- */
@@ -320,7 +480,7 @@ func buildLoadList() list.Model {
 func buildStartList() list.Model {
 	options := []list.Item{
 		item("Interface:"),
-		item("Filter: "),
+		item("Filter:"),
 		item("Capture"),
 	}
 
@@ -329,13 +489,63 @@ func buildStartList() list.Model {
 	return l
 }
 
+func buildInterfaceList(ifaces []string) list.Model {
+	items := make([]list.Item, len(ifaces))
+
+	for i, iface := range ifaces {
+		items[i] = item(iface)
+	}
+
+	l := list.New(items, list.NewDefaultDelegate(), 50, 20)
+	l.Title = "Select Interface"
+	return l
+}
+
+func buildFilterList(filters []string) list.Model {
+	items := make([]list.Item, len(filters))
+
+	for i, filter := range filters {
+		items[i] = item(filter)
+	}
+
+	l := list.New(items, list.NewDefaultDelegate(), 50, 20)
+	l.Title = "Select BPF Filter"
+	return l
+}
+
+func buildStartListWithState(iface, filter string) list.Model {
+
+	interfaceLabel := "Interface:"
+	if iface != "" {
+		interfaceLabel = "Interface: " + iface
+	}
+
+	filterLabel := "Filter:"
+	if filter != "" {
+		filterLabel = "Filter: " + filter
+	}
+
+	options := []list.Item{
+		item(interfaceLabel),
+		item(filterLabel),
+		item("Capture"),
+	}
+
+	l := list.New(options, list.NewDefaultDelegate(), 40, 17)
+	l.Title = "Capture Menu"
+
+	return l
+}
+
 func loadPacketsFromFile(file string) []model.ParsedPacket {
-	// fake data (substitui por parsing real depois)
+	// fake data 
 	return []model.ParsedPacket{
 	}
 }
 
 func renderPacketList(m modelCLI) string {
+
+	// ---------- TITLE ----------
 	title := "PACKETS"
 
 	if !m.paused {
@@ -344,30 +554,95 @@ func renderPacketList(m modelCLI) string {
 		title = pausedStyle.Render("PACKETS (PAUSED)")
 	}
 
-	out := title + "\n\n"
+	out := title + "\n"
 
-	for i, p := range m.packets {
+	// ---------- TOP LABLE ----------
+	header := fmt.Sprintf("%-*s %-*s %-*s %-*s %-*s %-*s",
+		2, "", 
+		colID, "ID",
+		colTime, "TIME",
+		colProto, "PROTOCOL",
+		colInfo, "INFO",
+		colLength, "LENGTH",
+	)
+
+	headerStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("240"))
+
+	out += headerStyle.Render(header) + "\n"
+	out += strings.Repeat("-", colID+colTime+colProto+colInfo+colLength+5) + "\n"
+
+	end := m.offset + m.height
+	if end > len(m.packets) {
+		end = len(m.packets)
+	}
+
+	var firstTime time.Time
+	hasPackets := len(m.packets) > 0
+
+	if hasPackets {
+		firstTime = m.packets[0].Timestamp
+	}
+
+	// ---------- ROW BUILDER ----------
+	for i := m.offset; i < end; i++ {
+    	p := m.packets[i]
+
+		// ---------- CURSOR ----------
 		cursor := " "
 		if i == m.cursor {
-			cursor = ">"
+			cursor = "▶"
+		}	
+
+		cursor = fmt.Sprintf("%-2s", cursor)
+
+		// ---------- TIME ELAPSE FORMATTING ----------
+		elapsed := 0.0
+		if hasPackets {
+			elapsed = p.Timestamp.Sub(firstTime).Seconds()
+			
+		}
+		timeStr := fmt.Sprintf("%.3fs", elapsed)
+
+
+		// ---------- PROTOCOL FORMATTING ----------
+		proto := "UNKNOWN"
+		if len(p.Layers) > 0 {
+			proto = p.Layers[len(p.Layers)-1].ProtocolType()
 		}
 
-		// last layer = highest protocol
-		proto := p.Layers[len(p.Layers)-1].ProtocolType()
-
 		protoStyled := lipgloss.NewStyle().
-			Foreground(lipgloss.Color("39")). // blue
-			Render(proto)
+			Foreground(lipgloss.Color("39")).
+			Render(fmt.Sprintf("%-*s", colProto, proto))
 
-		out += fmt.Sprintf("%s %3d  %-8s  %-40s  %5d bytes\n",
+		
+		// ---------- INFOS EXTRA FORMATTING ----------
+		info := view.Truncate(p.Infos, colInfo)
+
+		// ---------- ROW PRINT ----------
+		out += fmt.Sprintf("%s %-*d %-*s %-*s %-*s %-*d\n",
 			cursor,
-			i+1,
-			protoStyled,
-			p.Infos,
-			p.Length,
+			colID, i+1,
+			colTime, timeStr,
+			colProto, protoStyled,
+			colInfo, info,
+			colLength, p.Length,
 		)
 	}
 
+	// ---------- PAGING ----------
+	if len(m.packets) == 0 {
+		out += "\nShowing 0 packets"
+	} else {
+		out += fmt.Sprintf("\nShowing %d-%d of %d",
+			m.offset+1,
+			end,
+			len(m.packets),
+		)
+	}
+
+	// ---------- FOOTER ----------
 	out += "\nENTER = details | ESC = back | S = save | P = pause"
 
 	return out
@@ -377,8 +652,7 @@ func renderPacketDetail(p model.ParsedPacket, layerIndex int) string {
 
 	out := ""
 
-	// summary always visible
-	out += fmt.Sprintf("Timestamp: %s\n", p.Timestamp)
+	out += fmt.Sprintf("Timestamp: %s\n", p.Timestamp.Format("15:04:05.000"))
 	out += fmt.Sprintf("Interface: %s\n", p.Interface)
 	out += fmt.Sprintf("Length: %d\n\n", p.Length)
 
@@ -396,7 +670,12 @@ func renderPacketDetail(p model.ParsedPacket, layerIndex int) string {
 	out += fmt.Sprintf("\nLayer %d/%d", layerIndex+1, len(p.Layers))
 	out += "\n←/→ switch layer | ESC back"
 
-	return out
+	style := lipgloss.NewStyle().
+		PaddingTop(1).
+		PaddingLeft(2).
+		PaddingRight(2)
+
+	return style.Render(out)
 }
 
 
@@ -412,15 +691,17 @@ func waitForPacket(ch <-chan gopacket.Packet, iface string) tea.Cmd {
 	}
 }
 
-/* -------------------- MAIN -------------------- */
-
-func main() {
-	p := tea.NewProgram(initialModel(),	tea.WithAltScreen())
-
-	if err := p.Start(); err != nil {
-		fmt.Println("Error:", err)
-		os.Exit(1)
+func interfaceLabel(selected string) string {
+	if selected == "" {
+		return "Interface:"
 	}
-	
-	_ = time.Now()
+	return fmt.Sprintf("Interface: %s", selected)
+}
+
+/* -------------------- RUN -------------------- */
+
+func Run() error {
+	p := tea.NewProgram(InitialModel(), tea.WithAltScreen())
+	_, err := p.Run()
+	return err
 }

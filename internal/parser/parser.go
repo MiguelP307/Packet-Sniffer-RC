@@ -33,7 +33,7 @@ func Parse(packet gopacket.Packet, iface string) model.ParsedPacket {
 func newParsedPacket(packet gopacket.Packet, iface string) (*model.ParsedPacket){
 
 	return &model.ParsedPacket{
-		Timestamp: packet.Metadata().Timestamp.String(),
+		Timestamp: packet.Metadata().Timestamp,
 		Interface: iface,
 		Length: int(len(packet.Data())),
 		Layers: []model.Layer{},

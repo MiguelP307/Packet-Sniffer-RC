@@ -1,8 +1,10 @@
 package model
 
+import "time"
+
 type ParsedPacket struct {
 
-	Timestamp string
+	Timestamp time.Time
 	Interface string
 	Length int
 	Infos string

@@ -25,3 +25,17 @@ func FormatMAC(b []byte) string {
 	return fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x",
 		b[0], b[1], b[2], b[3], b[4], b[5])
 }
+
+func Truncate(s string, max int) string {
+	if len(s) <= max {
+		return s
+	}
+	return s[:max-3] + "..."
+}
+
+func Fit(s string, width int) string {
+	if len(s) > width {
+		return s[:width-1] + "…"
+	}
+	return fmt.Sprintf("%-*s", width, s)
+}

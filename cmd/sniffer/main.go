@@ -2,26 +2,20 @@ package main
 
 import (
 	"fmt"
-	"sniffer/internal/capture"
-	"sniffer/internal/parser"
-	"sniffer/internal/view"
+	"os"
+	"sniffer/internal/cli"
+	"time"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 func main() {
-    
-    Interface := "enp0s3"
+	p := tea.NewProgram(cli.InitialModel(),	tea.WithAltScreen())
 
-    packets, _ := capture.Start_Capture(Interface)
-
-    for packet := range packets{
-        packet := parser.Parse(packet, Interface)
-
-        lines := view.RenderPacket(packet)
-
-        for _, line := range lines {
-            fmt.Println(line)
-        }
-    }
-
-
+	if err := p.Start(); err != nil {
+		fmt.Println("Error:", err)
+		os.Exit(1)
+	}
+	
+	_ = time.Now()
 }

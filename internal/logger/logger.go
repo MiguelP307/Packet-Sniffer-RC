@@ -21,29 +21,7 @@ func NewLogger(filename string) (*Logger, error) {
 }
 
 func (l *Logger) Log(packet model.ParsedPacket) {
-
-	fmt.Println("--- Packet ---")
-	fmt.Println("Time:", packet.Timestamp)
-	fmt.Println("Iface:", packet.Interface)
-	fmt.Println("Length:", packet.Length)
-
-	protocol := getProtocol(packet)
-	fmt.Println("Protocol:", protocol)
-
-	for _, layer := range packet.Layers {
-
-		fmt.Println("[" + layer.LayerType() + "]")
-
-		for _, line := range layer.View() {
-			fmt.Println(line)
-		}
-	}
-
-	fmt.Println("Info:", packet.Infos)
-	fmt.Println("--------------")
-
 	if l.file != nil {
-
 		l.file.WriteString(formatPacket(packet))
 	}
 }
@@ -59,8 +37,8 @@ func formatPacket(packet model.ParsedPacket) string {
 
 	output += "--- Packet ---\n"
 	output += fmt.Sprintf("Time: %s\n", packet.Timestamp)
-	output += fmt.Sprintf("Iface: %s\n", packet.Interface)
-	output += fmt.Sprintf("Length: %d\n", packet.Length)
+	output += fmt.Sprintf("Interface: %s\n", packet.Interface)
+	output += fmt.Sprintf("Length: %s\n", packet.Length)
 
 	protocol := getProtocol(packet)
 	output += fmt.Sprintf("Protocol: %s\n", protocol)

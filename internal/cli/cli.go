@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"sniffer/internal/capture"
+	"sniffer/internal/filter"
 	"sniffer/internal/model"
 	"sniffer/internal/parser"
 	"sniffer/internal/view"
@@ -16,40 +17,40 @@ import (
 	"github.com/google/gopacket"
 )
 
-// --------------- FAKE DATA -------------
-
-func getFakeFilters() []string {
+func getFilters() []string {
 	return []string{
 		"",
-		"tcp port 80",
-		"udp",
+		"arp",
+		filter.IPv4(),
+		"ip6",
 		"icmp",
-		"host 8.8.8.8",
+		filter.TCP(),
+		filter.UDP(),
+		"port 53",
 		"port 443",
 	}
 }
-
 
 // --------------- STYLE ------------------
 
 var (
 	liveStyle = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("46")).
-		Bold(true)
+			Foreground(lipgloss.Color("46")).
+			Bold(true)
 
 	pausedStyle = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("196")).
-		Bold(true)
+			Foreground(lipgloss.Color("196")).
+			Bold(true)
 )
 
 /* ---------- RenderPacketView Table ------------ */
 
 const (
-	colID       = 4
-	colTime     = 10
-	colProto    = 10
-	colInfo     = 40
-	colLength   = 8
+	colID     = 4
+	colTime   = 10
+	colProto  = 10
+	colInfo   = 40
+	colLength = 8
 )
 
 /* -------------------- STATE -------------------- */
@@ -79,16 +80,15 @@ func (i item) Title() string       { return string(i) }
 func (i item) Description() string { return "" }
 func (i item) FilterValue() string { return string(i) }
 
-
 /* -------------------- MODEL -------------------- */
 
 type modelCLI struct {
 	state state
 
-	mainList list.Model
-	loadList list.Model
-	startList list.Model
-	ifaceList list.Model
+	mainList   list.Model
+	loadList   list.Model
+	startList  list.Model
+	ifaceList  list.Model
 	filterList list.Model
 
 	interfaces []string
@@ -106,7 +106,7 @@ type modelCLI struct {
 	height int
 
 	autoScroll bool
-	paused bool
+	paused     bool
 
 	captureChan <-chan gopacket.Packet
 
@@ -128,9 +128,9 @@ func InitialModel() modelCLI {
 	l.Title = "PL94 - Packet Sniffer"
 
 	return modelCLI{
-		state:     mainMenu,
-		mainList:  l,
-		packets:   []model.ParsedPacket{},
+		state:    mainMenu,
+		mainList: l,
+		packets:  []model.ParsedPacket{},
 	}
 }
 
@@ -311,12 +311,12 @@ func (m modelCLI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.state = selectInterface
 
 				case "Filter:":
-					filters := getFakeFilters()
+					filters := getFilters()
 
 					m.filters = filters
 					m.filterList = buildFilterList(filters)
 					m.state = selectFilter
-				
+
 				case "Capture":
 
 					ch, _ := capture.Start_Capture(m.selectedInterface, m.selectedFilter)
@@ -337,7 +337,7 @@ func (m modelCLI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var cmd tea.Cmd
 		m.startList, cmd = m.startList.Update(msg)
 		return m, cmd
-	
+
 	case selectInterface:
 		var cmd tea.Cmd
 
@@ -365,7 +365,7 @@ func (m modelCLI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		return m, cmd
 
-	case selectFilter:	
+	case selectFilter:
 		var cmd tea.Cmd
 
 		m.filterList, cmd = m.filterList.Update(msg)
@@ -385,14 +385,13 @@ func (m modelCLI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					tea.ClearScreen,
 				)
 
-
 			case "esc":
 				m.state = startMenu
 			}
 		}
 
 		return m, cmd
-	
+
 	}
 
 	return m, nil
@@ -538,9 +537,8 @@ func buildStartListWithState(iface, filter string) list.Model {
 }
 
 func loadPacketsFromFile(file string) []model.ParsedPacket {
-	// fake data 
-	return []model.ParsedPacket{
-	}
+	// fake data
+	return []model.ParsedPacket{}
 }
 
 func renderPacketList(m modelCLI) string {
@@ -558,7 +556,7 @@ func renderPacketList(m modelCLI) string {
 
 	// ---------- TOP LABLE ----------
 	header := fmt.Sprintf("%-*s %-*s %-*s %-*s %-*s %-*s",
-		2, "", 
+		2, "",
 		colID, "ID",
 		colTime, "TIME",
 		colProto, "PROTOCOL",
@@ -587,13 +585,13 @@ func renderPacketList(m modelCLI) string {
 
 	// ---------- ROW BUILDER ----------
 	for i := m.offset; i < end; i++ {
-    	p := m.packets[i]
+		p := m.packets[i]
 
 		// ---------- CURSOR ----------
 		cursor := " "
 		if i == m.cursor {
 			cursor = "▶"
-		}	
+		}
 
 		cursor = fmt.Sprintf("%-2s", cursor)
 
@@ -601,10 +599,9 @@ func renderPacketList(m modelCLI) string {
 		elapsed := 0.0
 		if hasPackets {
 			elapsed = p.Timestamp.Sub(firstTime).Seconds()
-			
+
 		}
 		timeStr := fmt.Sprintf("%.3fs", elapsed)
-
 
 		// ---------- PROTOCOL FORMATTING ----------
 		proto := "UNKNOWN"
@@ -616,7 +613,6 @@ func renderPacketList(m modelCLI) string {
 			Foreground(lipgloss.Color("39")).
 			Render(fmt.Sprintf("%-*s", colProto, proto))
 
-		
 		// ---------- INFOS EXTRA FORMATTING ----------
 		info := view.Truncate(p.Infos, colInfo)
 
@@ -677,7 +673,6 @@ func renderPacketDetail(p model.ParsedPacket, layerIndex int) string {
 
 	return style.Render(out)
 }
-
 
 func waitForPacket(ch <-chan gopacket.Packet, iface string) tea.Cmd {
 	return func() tea.Msg {

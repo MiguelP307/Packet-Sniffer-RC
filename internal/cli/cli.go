@@ -6,8 +6,9 @@ import (
 	"time"
 
 	"sniffer/internal/capture"
-	"sniffer/internal/flow"
 	"sniffer/internal/filter"
+	"sniffer/internal/flow"
+	"sniffer/internal/logger"
 	"sniffer/internal/model"
 	"sniffer/internal/parser"
 	"sniffer/internal/view"
@@ -114,6 +115,9 @@ type modelCLI struct {
 	flowManager *flow.Manager
 
 	layerIndex int
+
+	logger *logger.Logger
+	
 }
 
 type packetMsg model.ParsedPacket
@@ -152,6 +156,12 @@ func (m modelCLI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 
 	case packetMsg:
+
+		parsed := model.ParsedPacket(msg)
+
+        if m.logger != nil {
+            m.logger.Log(parsed)
+        }
 
 		if !m.paused {
 			m.packets = append(m.packets, model.ParsedPacket(msg))
@@ -268,6 +278,12 @@ func (m modelCLI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.state = flowViewer
 
 			case "esc":
+
+				if m.logger != nil {
+                    m.logger.Close()
+                    m.logger = nil
+                }
+
 				m.captureChan = nil
 				m.packets = []model.ParsedPacket{}
 				m.selectedInterface = ""
@@ -341,6 +357,13 @@ func (m modelCLI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.state = selectFilter
 
 				case "Capture":
+
+					logInstance, err := logger.NewLogger(m.selectedInterface)
+                    if err != nil {
+                        return m, nil
+                    }
+
+                    m.logger = logInstance
 
 					ch, _ := capture.Start_Capture(m.selectedInterface, m.selectedFilter)
 

@@ -55,10 +55,12 @@ func formatPacket(packet model.ParsedPacket) string {
 
 	output := ""
 
-	output += "--- Packet ---\n"
+	output += "=============== Packet ===============\n"
 	output += fmt.Sprintf("Time: %s\n", packet.Timestamp)
 	output += fmt.Sprintf("Iface: %s\n", packet.Interface)
 	output += fmt.Sprintf("Length: %d\n", packet.Length)
+
+	output += "\n"
 
 	protocol := getProtocol(packet)
 	output += fmt.Sprintf("Protocol: %s\n", protocol)
@@ -70,10 +72,12 @@ func formatPacket(packet model.ParsedPacket) string {
 		for _, line := range layer.View() {
 			output += line + "\n"
 		}
+
+		output += "\n\n"
 	}
 
 	output += fmt.Sprintf("Info: %s\n", packet.Infos)
-	output += "--------------\n"
+	output += "=======================================\n\n\n\n\n"
 
 	return output
 }

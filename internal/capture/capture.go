@@ -15,6 +15,10 @@ func Start_Capture(interfaceName string, filterExpr string) (<- chan gopacket.Pa
 		panic(err)
 	}
 
+	if filterExpr == "none" {
+		filterExpr = ""
+	}
+
 	if err := filter.ApplyBPF(handle, filterExpr); err != nil {
 		return nil, err
 	}

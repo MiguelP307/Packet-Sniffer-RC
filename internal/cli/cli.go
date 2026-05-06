@@ -21,7 +21,8 @@ import (
 
 func getFilters() []string {
 	return []string{
-		"",
+		"none",
+		"custom...",
 		"arp",
 		filter.IPv4(),
 		"ip6",
@@ -68,6 +69,7 @@ const (
 	packetViewer
 	packetDetail
 	flowViewer
+	customFilterInput
 )
 
 type menuItem struct {
@@ -99,6 +101,7 @@ type modelCLI struct {
 
 	selectedInterface string
 	selectedFilter    string
+	customFilter string
 
 	packets        []model.ParsedPacket
 	selectedPacket model.ParsedPacket
@@ -424,6 +427,12 @@ func (m modelCLI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "enter":
 				selected := m.filterList.SelectedItem().(item)
 
+				if string(selected) == "custom..." {
+					m.state = customFilterInput
+					m.customFilter = ""
+					return m, nil
+				}
+
 				m.selectedFilter = string(selected)
 				m.state = startMenu
 
@@ -438,7 +447,36 @@ func (m modelCLI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		return m, cmd
 
+
+	case customFilterInput:
+		switch msg := msg.(type) {
+
+		case tea.KeyMsg:
+
+			switch msg.String() {
+
+			case "enter":
+				m.selectedFilter = m.customFilter
+				m.state = startMenu
+				return m, nil
+
+			case "esc":
+				m.state = selectFilter
+				return m, nil
+
+			case "backspace":
+				if len(m.customFilter) > 0 {
+					m.customFilter = m.customFilter[:len(m.customFilter)-1]
+				}
+
+			default:
+				m.customFilter += msg.String()
+			}
+		}
+		return m, nil
 	}
+
+	
 
 	return m, nil
 }
@@ -487,6 +525,12 @@ func (m modelCLI) View() string {
 			return "Loading filters..."
 		}
 		return m.filterList.View()
+
+	case customFilterInput:
+		return fmt.Sprintf(
+			"Enter custom BPF filter:\n\n%s\n\nENTER = confirm | ESC = back",
+			m.customFilter,
+		)
 
 	case loadMenu:
 		return m.loadList.View()

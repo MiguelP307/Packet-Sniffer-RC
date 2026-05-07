@@ -9,27 +9,36 @@
 
 ## Ubuntu / Xubuntu CORE
 
+```bash
 sudo apt update
 sudo apt install golang-go libpcap-dev
+```
 
-Clone the repository:
+**Clone the repository:**
 
-git clone [<repo>](https://github.com/MiguelP307/Packet-Sniffer-RC.git)
+```bash
+git clone https://github.com/MiguelP307/Packet-Sniffer-RC.git
 cd rc-sniffer
+```
 
+**Download dependencies:**
 
-Download dependencies:
-
+```bash
 go mod download
+```
 
 
 # Build
 
+```bash
 go build -o sniffer ./cmd/sniffer
+```
 
 # RUN
 
+```bash
 sudo ./sniffer
+```
 
 
 # Selecting an interface
@@ -43,7 +52,7 @@ After launching the app:
 
 # Selecting a filter
 
-After launching the app:
+**After launching the app:**
 
 1. Select "Start Capture"
 2. Select "Filter"
@@ -57,7 +66,7 @@ Filters have a similar format to the ones used on `tcpdump`
 
 The footer displays all available keybindings during execution.
 
-Example controls:
+**Example controls:**
 - q → quit application
 - p → pause capture
 - ↑/↓ → navigate menus
@@ -77,7 +86,9 @@ Log's file name will be on the following formate: `<interface>_<date>_<time>.log
 2. Transfer/build the application
 3. Run with root privileges:
 
+```bash
 sudo ./sniffer
+```
 
 
 # Running on PC

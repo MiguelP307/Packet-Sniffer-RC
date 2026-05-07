@@ -1,7 +1,6 @@
 package parser
 
 import (
-	//"fmt"
 	"fmt"
 	"sniffer/internal/model"
 	"sniffer/internal/protocols/layer2"
@@ -35,7 +34,6 @@ func Parse(packet gopacket.Packet, iface string) model.ParsedPacket {
 		parseL3(protocolType, payload, newParsedPacket)
 
 	default:
-		// unknown / unsupported L2
 		return *newParsedPacket
 	}
 
@@ -57,7 +55,7 @@ func newParsedPacket(packet gopacket.Packet, iface string) *model.ParsedPacket {
 func parseL3(protocol uint16, data []byte, newParsedPacket *model.ParsedPacket) {
 
 	if protocol == 0 {
-		// Its WiFi
+		// its WiFi
 		return
 	}
 
@@ -109,7 +107,7 @@ func BuildInfo(p model.ParsedPacket) string {
 
 	var srcIP, dstIP string
 
-	// First pass: get IPs
+	
 	for _, l := range p.Layers {
 
 		switch v := l.(type) {
@@ -125,7 +123,6 @@ func BuildInfo(p model.ParsedPacket) string {
 		}
 	}
 
-	// Second pass: top-down logic
 	for i := len(p.Layers) - 1; i >= 0; i-- {
 		switch v := p.Layers[i].(type) {
 

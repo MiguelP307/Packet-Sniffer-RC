@@ -15,7 +15,6 @@ type IPv4 struct {
 
 	Identification uint16
 	
-	//Flags 3-bit
 	ReservedBit bool
 	NotFragment bool
 	MoreFragments bool
@@ -60,7 +59,6 @@ func (i *IPv4) View() []string {
 
 func HandleIPv4(data []byte, parsedPacket *model.ParsedPacket) (uint8, []byte){
 
-	// Get header length
 	fstByte := data[0]
 	version := fstByte >> 4
 	headerLen := (fstByte & 0x0F) * 4
@@ -90,7 +88,7 @@ func HandleIPv4(data []byte, parsedPacket *model.ParsedPacket) (uint8, []byte){
 		TotalLength: totalLength,
 		Identification: id,
 
-		//Flags 3-bit
+		
 		ReservedBit: rbFlag == 1,
 		NotFragment: nfFlag == 1,
 		MoreFragments: mfFlag == 1,
@@ -111,6 +109,5 @@ func HandleIPv4(data []byte, parsedPacket *model.ParsedPacket) (uint8, []byte){
 
 
 func getIPv4(data []byte) (string) {
-	// Data will always be 4 bytes long, Uint32
 	return net.IP(data).String()
 }

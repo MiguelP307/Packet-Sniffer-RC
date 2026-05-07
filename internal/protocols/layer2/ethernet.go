@@ -33,7 +33,6 @@ func (e *Ethernet) View() []string{
 
 func HandleEthernet(data []byte, parsedPacket *model.ParsedPacket) (uint16, []byte) {
 	
-	//Here we get the bytes one the index 12 to 13 where the EthType(2B size) is
 	srcMac := view.FormatMAC(data[0:6])
 	dstMac := view.FormatMAC(data[6:12])
 

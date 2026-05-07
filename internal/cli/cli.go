@@ -63,7 +63,6 @@ type state int
 const (
 	mainMenu state = iota
 	startMenu
-	loadMenu
 	selectInterface
 	selectFilter
 	packetViewer
@@ -91,7 +90,6 @@ type modelCLI struct {
 	state state
 
 	mainList   list.Model
-	loadList   list.Model
 	startList  list.Model
 	ifaceList  list.Model
 	filterList list.Model
@@ -204,10 +202,6 @@ func (m modelCLI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.state = startMenu
 					m.startList = buildStartList()
 
-				case "Load Capture":
-					m.state = loadMenu
-					m.loadList = buildLoadList()
-
 				case "Exit":
 					return m, tea.Quit
 				}
@@ -221,23 +215,6 @@ func (m modelCLI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.mainList, cmd = m.mainList.Update(msg)
 		return m, cmd
 
-	/* ---------------- LOAD MENU ---------------- */
-	case loadMenu:
-		switch msg := msg.(type) {
-
-		case tea.KeyMsg:
-			switch msg.String() {
-			case "enter":
-				selected := m.loadList.SelectedItem().(item)
-
-				m.packets = loadPacketsFromFile(string(selected))
-				m.state = packetViewer
-			}
-		}
-
-		var cmd tea.Cmd
-		m.loadList, cmd = m.loadList.Update(msg)
-		return m, cmd
 
 	/* ---------------- PACKET VIEWER ---------------- */
 	case packetViewer:
@@ -527,9 +504,6 @@ func (m modelCLI) View() string {
 			m.customFilter,
 		)
 
-	case loadMenu:
-		return m.loadList.View()
-
 	case packetViewer:
 		return renderPacketList(m)
 
@@ -622,11 +596,6 @@ func buildStartListWithState(iface, filter string) list.Model {
 	l.Title = "Capture Menu"
 
 	return l
-}
-
-func loadPacketsFromFile(file string) []model.ParsedPacket {
-	// fake data
-	return []model.ParsedPacket{}
 }
 
 func renderPacketList(m modelCLI) string {

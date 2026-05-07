@@ -55,7 +55,7 @@ func (h *HTTP_Response) View() []string {
 
 func HandleHTTP(data []byte, parsedPacket *model.ParsedPacket) {
 
-	// Search for the end of the first line
+	// search for the end of the first line
     endOfLine := bytes.Index(data, []byte("\r\n"))
     if endOfLine == -1 {
         return 
@@ -63,13 +63,13 @@ func HandleHTTP(data []byte, parsedPacket *model.ParsedPacket) {
 
     firstLine := data[:endOfLine]
 
-	// Checks for the 3 components of the message
+	// checks for  3 components of the message
     parts := bytes.SplitN(firstLine, []byte(" "), 3)
     if len(parts) < 3 {
         return
     }
 
-    // Detect response vs request
+    // choose between response vs request
     if bytes.HasPrefix(firstLine, []byte("HTTP/")) {
 
 		http := &HTTP_Response{
@@ -91,5 +91,4 @@ func HandleHTTP(data []byte, parsedPacket *model.ParsedPacket) {
 		parsedPacket.Layers = append(parsedPacket.Layers, http)
     }
 
-    return
 }

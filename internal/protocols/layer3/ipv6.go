@@ -76,7 +76,6 @@ func HandleIPv6(data []byte, parsedPacket *model.ParsedPacket) (uint8, []byte) {
 
 	headerLen := 0
 	
-	// Check if the IPv6 has extension packets
 	for isExtensionHeader(nextHeader){
 
 		nextExtHeader := data[offset:]

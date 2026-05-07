@@ -18,7 +18,6 @@ type TCP struct {
 
 	DataOffset uint8
 	
-	//Flags
 	AckFlag bool
 	SynFlag bool
 	FinFlag bool
@@ -77,7 +76,6 @@ func HandleTCP(data []byte, parsedPacket *model.ParsedPacket) (uint16, uint16, [
 
 		DataOffset: dataOffset,
 		
-		//Flags
 		AckFlag: ackF == 1,
 		SynFlag: synF == 1,
 		FinFlag: finF == 1,

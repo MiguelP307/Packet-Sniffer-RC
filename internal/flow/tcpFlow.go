@@ -16,12 +16,11 @@ type TCPFlow struct {
 	StartTime time.Time
 	LastSeen  time.Time
 
-	State string // SYN_SENT, ESTABLISHED, FIN_WAIT, CLOSED
+	State string 
 
 	Packets int
 	Bytes   int
 
-	// RTT tracking
 	LastSeq uint32
 	LastAck uint32
 	LastSeqTime time.Time

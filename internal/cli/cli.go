@@ -101,7 +101,7 @@ type modelCLI struct {
 
 	selectedInterface string
 	selectedFilter    string
-	customFilter string
+	customFilter      string
 
 	packets        []model.ParsedPacket
 	selectedPacket model.ParsedPacket
@@ -120,7 +120,6 @@ type modelCLI struct {
 	layerIndex int
 
 	logger *logger.Logger
-	
 }
 
 type packetMsg model.ParsedPacket
@@ -138,9 +137,9 @@ func InitialModel() modelCLI {
 	l.Title = "PL94 - Packet Sniffer"
 
 	return modelCLI{
-		state:     mainMenu,
-		mainList:  l,
-		packets:   []model.ParsedPacket{},
+		state:       mainMenu,
+		mainList:    l,
+		packets:     []model.ParsedPacket{},
 		flowManager: flow.NewManager(),
 	}
 }
@@ -162,9 +161,9 @@ func (m modelCLI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		parsed := model.ParsedPacket(msg)
 
-        if m.logger != nil {
-            m.logger.Log(parsed)
-        }
+		if m.logger != nil {
+			m.logger.Log(parsed)
+		}
 
 		if !m.paused {
 			m.packets = append(m.packets, model.ParsedPacket(msg))
@@ -283,9 +282,9 @@ func (m modelCLI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "esc":
 
 				if m.logger != nil {
-                    m.logger.Close()
-                    m.logger = nil
-                }
+					m.logger.Close()
+					m.logger = nil
+				}
 
 				m.captureChan = nil
 				m.packets = []model.ParsedPacket{}
@@ -317,7 +316,6 @@ func (m modelCLI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 		return m, nil
-
 
 	/* ---------------- FLOW VIEWER ---------------- */
 	case flowViewer:
@@ -362,11 +360,11 @@ func (m modelCLI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				case "Capture":
 
 					logInstance, err := logger.NewLogger(m.selectedInterface)
-                    if err != nil {
-                        return m, nil
-                    }
+					if err != nil {
+						return m, nil
+					}
 
-                    m.logger = logInstance
+					m.logger = logInstance
 
 					ch, _ := capture.Start_Capture(m.selectedInterface, m.selectedFilter)
 
@@ -447,7 +445,6 @@ func (m modelCLI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		return m, cmd
 
-
 	case customFilterInput:
 		switch msg := msg.(type) {
 
@@ -475,8 +472,6 @@ func (m modelCLI) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 	}
-
-	
 
 	return m, nil
 }
@@ -542,7 +537,7 @@ func (m modelCLI) View() string {
 		return renderPacketDetail(m.selectedPacket, m.layerIndex)
 
 	case flowViewer:
-    	return renderFlowView(m)
+		return renderFlowView(m)
 	}
 
 	return ""
@@ -732,7 +727,7 @@ func renderPacketList(m modelCLI) string {
 	}
 
 	// ---------- FOOTER ----------
-	out += "\nENTER = details | ESC = back | S = save | P = pause | C = Connections"
+	out += "\nENTER = details | ESC = back | P = pause | C = Connections"
 
 	return out
 }
@@ -769,44 +764,44 @@ func renderPacketDetail(p model.ParsedPacket, layerIndex int) string {
 
 func renderFlowView(m modelCLI) string {
 
-    out := "TCP FLOWS\n\n"
+	out := "TCP FLOWS\n\n"
 
-    active := 0
-    closed := 0
+	active := 0
+	closed := 0
 
-    for _, f := range m.flowManager.Flows {
-        if f.State == "CLOSED" {
-            closed++
-        } else {
-            active++
-        }
-    }
+	for _, f := range m.flowManager.Flows {
+		if f.State == "CLOSED" {
+			closed++
+		} else {
+			active++
+		}
+	}
 
-    out += fmt.Sprintf("Active: %d | Closed: %d | Total: %d\n\n",
-        active, closed, len(m.flowManager.Flows),
-    )
+	out += fmt.Sprintf("Active: %d | Closed: %d | Total: %d\n\n",
+		active, closed, len(m.flowManager.Flows),
+	)
 
-    out += "KEY | STATE | DURATION | PACKETS | BYTES\n"
-    out += strings.Repeat("-", 70) + "\n"
+	out += "KEY | STATE | DURATION | PACKETS | BYTES\n"
+	out += strings.Repeat("-", 70) + "\n"
 
-    now := time.Now()
+	now := time.Now()
 
-    for _, f := range m.flowManager.Flows {
+	for _, f := range m.flowManager.Flows {
 
-        duration := now.Sub(f.StartTime).Seconds()
+		duration := now.Sub(f.StartTime).Seconds()
 
-        out += fmt.Sprintf("%s | %s | %.1fs | %d | %d\n",
-            f.Key,
-            f.State,
-            duration,
-            f.Packets,
-            f.Bytes,
-        )
-    }
+		out += fmt.Sprintf("%s | %s | %.1fs | %d | %d\n",
+			f.Key,
+			f.State,
+			duration,
+			f.Packets,
+			f.Bytes,
+		)
+	}
 
-    out += "\nESC = back"
+	out += "\nESC = back"
 
-    return out
+	return out
 }
 
 func waitForPacket(ch <-chan gopacket.Packet, iface string) tea.Cmd {

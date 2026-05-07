@@ -18,7 +18,7 @@ sudo apt install golang-go libpcap-dev
 
 ```bash
 git clone https://github.com/MiguelP307/Packet-Sniffer-RC.git
-cd rc-sniffer
+cd Packet-Sniffer-RC
 ```
 
 **Download dependencies:**

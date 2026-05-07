@@ -1,13 +1,13 @@
-# Requirements
+## Requirements
 
 - Go 1.26.2+ (or compatible)
 - libpcap-dev
 - Linux environment (tested on Xubuntu CORE)
 - Root/Admin privileges for packet capture
 
-# Installation
+## Installation
 
-## Ubuntu / Xubuntu CORE
+### Ubuntu / Xubuntu CORE
 
 ```bash
 sudo apt update
@@ -28,20 +28,20 @@ go mod download
 ```
 
 
-# Build
+## Build
 
 ```bash
 go build -o sniffer ./cmd/sniffer
 ```
 
-# RUN
+## RUN
 
 ```bash
 sudo ./sniffer
 ```
 
 
-# Selecting an interface
+## Selecting an interface
 
 After launching the app:
 
@@ -50,7 +50,7 @@ After launching the app:
 3. Choose between all the available interfaces, selecting the desired one
 
 
-# Selecting a filter
+## Selecting a filter
 
 **After launching the app:**
 
@@ -58,11 +58,11 @@ After launching the app:
 2. Select "Filter"
 3. Choose between all the available filter or select "Custom..." if you want to give a filter as an input
 
-### Note: 
+#### Note: 
 Filters have a similar format to the ones used on `tcpdump`
 
 
-# Controls
+## Controls
 
 The footer displays all available keybindings during execution.
 
@@ -74,13 +74,13 @@ The footer displays all available keybindings during execution.
 - esc → navigate to the last menu
 - c → Show available connections 
 
-# Logging
+## Logging
 
 Captured packets can will be automatically logged, you can find the logs inside a directory on the root of the project named **"logs"**.
 Log's file name will be on the following formate: `<interface>_<date>_<time>.log`
 
 
-# Running on CORE
+## Running on CORE
 
 1. Open a terminal on the desired CORE node
 2. Transfer/build the application
@@ -91,7 +91,7 @@ sudo ./sniffer
 ```
 
 
-# Running on PC
+## Running on PC
 
 The application can also capture traffic from real interfaces such as:
 - Ethernet (eth0)

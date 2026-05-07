@@ -83,8 +83,9 @@ Log's file name will be on the following formate: `<interface>_<date>_<time>.log
 ## Running on CORE
 
 1. Open a terminal on the desired CORE node
-2. Transfer/build the application
-3. Run with root privileges:
+2. Navigate to `root@name:/` -- for me: (`cd ../../..`)
+3. Navigate to the root of the project -- if you have the project on ur Desktop, would be something like `cd home/core/Desktop/rc-sniffer`
+4. Run with root privileges:
 
 ```bash
 sudo ./sniffer
